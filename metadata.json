@@ -1,0 +1,6 @@
+{
+  "name": "LiberConsPrim - Servicii Automacara Chișinău",
+  "description": "Servicii profesionale de automacara 25 tone în Chișinău și Republica Moldova. Montaj structuri metalice, descărcare containere și manevre de înaltă precizie.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -180,6 +180,158 @@ export default function App() {
         {/* Main Content Stream */}
         <main className="flex-1 px-4 py-4 space-y-4">
 
+          {/* 1. TOP HERO: Real Crane Showcase Header */}
+          <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-[#131b2e] shadow-xl">
+            <div className="relative h-60 w-full overflow-hidden bg-slate-900">
+              <img
+                src="/crane-hero.jpg"
+                alt="Automacara XCMG 25 tone la lucru pe șantier în Chișinău"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1326] via-[#0b1326]/30 to-transparent"></div>
+
+              {/* Top Badges */}
+              <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                <div className="bg-[#060e20]/85 backdrop-blur-md border border-amber-400/30 rounded-lg px-2.5 py-1 text-[10px] font-bold text-slate-200 flex items-center gap-1.5 shadow-md">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="tracking-wide">UTILAJ ACTIV CHIȘINĂU</span>
+                </div>
+                <div className="bg-[#eab308] text-slate-950 font-black text-[10px] px-2 py-1 rounded shadow-md uppercase tracking-wider">
+                  XCMG 25T
+                </div>
+              </div>
+
+              {/* Bottom Caption Overlay */}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs">
+                <div>
+                  <span className="block font-black text-white uppercase tracking-wider text-xs">
+                    AUTOMACARA XCMG 25 TONE
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-semibold">
+                    Montaj structuri • Descărcare containere
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 px-2 py-1 rounded backdrop-blur-sm">
+                  GATA DE INTERVENȚIE
+                </span>
+              </div>
+            </div>
+
+            {/* Quick interactive action bar below hero photo */}
+            <div className="p-2.5 bg-[#0b1326] border-t border-slate-800 flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={() => setShowCalculator(!showCalculator)}
+                className="text-amber-400 font-bold hover:text-amber-300 flex items-center gap-1.5 transition-colors px-2 py-1 rounded bg-[#131b2e] border border-amber-400/30 text-[11px]"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>{showCalculator ? 'Ascunde Calculator' : 'Calculator Sarcină / Înălțime'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowQuoteModal(true)}
+                className="text-slate-200 hover:text-white flex items-center gap-1 font-semibold text-[11px] bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700"
+              >
+                <span>Cere Ofertă Scrisă</span>
+                <ChevronRight className="w-3 h-3 text-[#eab308]" />
+              </button>
+            </div>
+          </div>
+
+          {/* Optional Interactive Feasibility Calculator (placed right under hero if toggled) */}
+          {showCalculator && (
+            <div className="bg-[#162036] rounded-2xl p-4 border border-amber-400/30 space-y-3.5 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase">
+                    CALCULATOR RAPID PE ȘANTIER
+                  </span>
+                  <h3 className="text-sm font-black text-white uppercase">
+                    Verificare Compatibilitate XCMG 25T
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowCalculator(false)}
+                  className="text-slate-400 hover:text-white p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Weight Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-300">Greutate încărcătură:</span>
+                  <span className="text-amber-400 font-bold">{calcWeight} Tone</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="25"
+                  value={calcWeight}
+                  onChange={(e) => setCalcWeight(Number(e.target.value))}
+                  className="w-full accent-amber-400 bg-slate-700 h-2 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>1 Tonă</span>
+                  <span>12 Tone</span>
+                  <span>25 Tone (Max)</span>
+                </div>
+              </div>
+
+              {/* Height / Radius Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-300">Rază / Înălțime estimată:</span>
+                  <span className="text-amber-400 font-bold">{calcRadius} Metri</span>
+                </div>
+                <input
+                  type="range"
+                  min="3"
+                  max="40"
+                  value={calcRadius}
+                  onChange={(e) => setCalcRadius(Number(e.target.value))}
+                  className="w-full accent-amber-400 bg-slate-700 h-2 rounded-lg cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>3 m</span>
+                  <span>20 m</span>
+                  <span>40+ m (Braț + Jib)</span>
+                </div>
+              </div>
+
+              {/* Result box */}
+              <div
+                className={`p-3 rounded-xl border text-xs ${
+                  isFeasible
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                    : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold mb-1">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>
+                    {isFeasible
+                      ? 'Compatibil 100% cu macaraua noastră!'
+                      : 'Necesară evaluare tehnică la fața locului'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Configurație: <strong className="text-white">{recommendedConfig}</strong>. Sunați
+                  dispeceratul pentru confirmarea razei de calare.
+                </p>
+                <a
+                  href={`tel:069547396`}
+                  className="mt-2 inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-amber-500 transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5 fill-current" />
+                  <span>Rezervă pentru lucrare ({calcWeight}t la {calcRadius}m)</span>
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Status Banner */}
           <div className="bg-[#131b2e] border border-slate-700/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-slate-300">
@@ -311,150 +463,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Crane Hero Showcase Image */}
-          <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-[#131b2e] shadow-xl">
-            <div className="relative h-56 w-full overflow-hidden bg-slate-900">
-              <img
-                src="/crane-hero.jpg"
-                alt="Automacara XCMG 25 tone la lucru pe șantier în Chișinău"
-                className="w-full h-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1326] via-[#0b1326]/40 to-transparent"></div>
 
-              {/* Top Badge */}
-              <div className="absolute top-3 left-3 bg-[#060e20]/80 backdrop-blur-md border border-white/10 rounded-lg px-2.5 py-1 text-[10px] font-bold text-slate-200 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span>UTILAJ DE ÎNALTĂ PRECIZIE • FLOTĂ ACTIVĂ CHIȘINĂU</span>
-              </div>
-
-              {/* Bottom Caption Overlay */}
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#eab308] animate-ping"></span>
-                  <span className="font-extrabold text-white uppercase tracking-wider text-[11px]">
-                    XCMG 25 TONE LA DATORIE
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded">
-                  GATA DE INTERVENȚIE
-                </span>
-              </div>
-            </div>
-
-            {/* Quick interactive action bar below hero photo */}
-            <div className="p-2.5 bg-[#0b1326] border-t border-slate-800 flex items-center justify-between text-xs">
-              <button
-                type="button"
-                onClick={() => setShowCalculator(!showCalculator)}
-                className="text-amber-400 font-bold hover:text-amber-300 flex items-center gap-1.5 transition-colors px-2 py-1 rounded bg-[#131b2e] border border-amber-400/30 text-[11px]"
-              >
-                <Calculator className="w-3.5 h-3.5" />
-                <span>{showCalculator ? 'Ascunde Calculator' : 'Calculator Sarcină / Înălțime'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowQuoteModal(true)}
-                className="text-slate-200 hover:text-white flex items-center gap-1 font-semibold text-[11px] bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700"
-              >
-                <span>Cere Ofertă Scrisă</span>
-                <ChevronRight className="w-3 h-3 text-[#eab308]" />
-              </button>
-            </div>
-          </div>
-
-          {/* Optional Interactive Feasibility Calculator */}
-          {showCalculator && (
-            <div className="bg-[#162036] rounded-2xl p-4 border border-amber-400/30 space-y-3.5 animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase">
-                    CALCULATOR RAPID PE ȘANTIER
-                  </span>
-                  <h3 className="text-sm font-black text-white uppercase">
-                    Verificare Compatibilitate XCMG 25T
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowCalculator(false)}
-                  className="text-slate-400 hover:text-white p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Weight Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-300">Greutate încărcătură:</span>
-                  <span className="text-amber-400 font-bold">{calcWeight} Tone</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="25"
-                  value={calcWeight}
-                  onChange={(e) => setCalcWeight(Number(e.target.value))}
-                  className="w-full accent-amber-400 bg-slate-700 h-2 rounded-lg cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>1 Tonă</span>
-                  <span>12 Tone</span>
-                  <span>25 Tone (Max)</span>
-                </div>
-              </div>
-
-              {/* Height / Radius Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-300">Rază / Înălțime estimată:</span>
-                  <span className="text-amber-400 font-bold">{calcRadius} Metri</span>
-                </div>
-                <input
-                  type="range"
-                  min="3"
-                  max="40"
-                  value={calcRadius}
-                  onChange={(e) => setCalcRadius(Number(e.target.value))}
-                  className="w-full accent-amber-400 bg-slate-700 h-2 rounded-lg cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>3 m</span>
-                  <span>20 m</span>
-                  <span>40+ m (Braț + Jib)</span>
-                </div>
-              </div>
-
-              {/* Result box */}
-              <div
-                className={`p-3 rounded-xl border text-xs ${
-                  isFeasible
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
-                }`}
-              >
-                <div className="flex items-center gap-2 font-bold mb-1">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>
-                    {isFeasible
-                      ? 'Compatibil 100% cu macaraua noastră!'
-                      : 'Necesară evaluare tehnică la fața locului'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Configurație: <strong className="text-white">{recommendedConfig}</strong>. Sunați
-                  dispeceratul pentru confirmarea razei de calare.
-                </p>
-                <a
-                  href={`tel:069547396`}
-                  className="mt-2 inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-amber-500 transition-colors"
-                >
-                  <Phone className="w-3.5 h-3.5 fill-current" />
-                  <span>Rezervă pentru lucrare ({calcWeight}t la {calcRadius}m)</span>
-                </a>
-              </div>
-            </div>
-          )}
 
           {/* Parametri Tehnici Utilaj Section */}
           <div className="bg-[#162036] rounded-2xl p-4 border border-slate-700/70 shadow-lg space-y-3.5">

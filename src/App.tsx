@@ -95,7 +95,7 @@ export default function App() {
             {/* Official Brand Logo */}
             <div className="h-10 px-2.5 bg-white rounded-lg border border-amber-400/40 flex items-center justify-center shadow-md">
               <img
-                src="/assets/aistudio/image_47aca923.png"
+                src="/logo.png"
                 alt="LiberCons Prim Logo"
                 className="h-6 w-auto object-contain"
               />
@@ -161,7 +161,7 @@ export default function App() {
             <div className="flex items-center justify-between mb-3 gap-2">
               <div className="bg-white rounded-xl py-2 px-3.5 shadow-lg border border-amber-400/40 flex items-center">
                 <img
-                  src="/assets/aistudio/image_47aca923.png"
+                  src="/logo.png"
                   alt="LiberCons Prim Logo"
                   className="h-10 sm:h-11 w-auto object-contain"
                 />
@@ -653,7 +653,7 @@ export default function App() {
             <div className="flex justify-center mb-1">
               <div className="bg-white rounded-xl px-3.5 py-1.5 border border-slate-700/80 shadow-md inline-flex items-center">
                 <img
-                  src="/assets/aistudio/image_47aca923.png"
+                  src="/logo.png"
                   alt="LiberCons Prim Logo"
                   className="h-6 w-auto object-contain"
                 />
@@ -729,7 +729,7 @@ export default function App() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="bg-white rounded-lg px-2.5 py-1 inline-flex items-center shadow-sm">
                       <img
-                        src="/assets/aistudio/image_47aca923.png"
+                        src="/logo.png"
                         alt="LiberCons Prim Logo"
                         className="h-5 w-auto object-contain"
                       />

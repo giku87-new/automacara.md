@@ -18,7 +18,9 @@ import {
   Send,
   X,
   Sparkles,
-  Zap
+  Zap,
+  HelpCircle,
+  ChevronDown
 } from 'lucide-react';
 
 export default function App() {
@@ -28,6 +30,7 @@ export default function App() {
   const [calcWeight, setCalcWeight] = useState<number>(5);
   const [calcRadius, setCalcRadius] = useState<number>(15);
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -35,6 +38,39 @@ export default function App() {
     workType: 'Montaj structuri',
     weight: 'Până în 5 tone',
   });
+
+  const faqs = [
+    {
+      qRo: 'În cât timp ajunge automacaraua la șantier în Chișinău?',
+      qRu: 'Как быстро автокран прибывает на объект в Кишиневе?',
+      aRo: 'Timpul mediu de deplasare și calare este de aproximativ 45 de minute în raza municipiului Chișinău (Botanica, Centru, Rîșcani, Ciocana, Buiucani, Poșta Veche, suburbii).',
+      aRu: 'Среднее время прибытия и установки составляет около 45 минут по Кишиневу и пригородам.'
+    },
+    {
+      qRo: 'Care este capacitatea și lungimea brațului macaralei?',
+      qRu: 'Какова грузоподъемность и вылет стрелы?',
+      aRo: 'Automacaraua modernă XCMG are o capacitate maximă de 25 tone și un braț telescopic extensibil de 40 metri (până la 48 metri cu extensie Jib). Sistem de rotație 360° și senzori computerizați de sarcină.',
+      aRu: 'Грузоподъемность 25 тонн, телескопическая стрела 40-48 метров (с гуськом). Поворот 360°, компьютерный контроль безопасности.'
+    },
+    {
+      qRo: 'Eliberați factură fiscală și lucrați prin transfer (TVA)?',
+      qRu: 'Предоставляете налоговые накладные и безналичный расчет?',
+      aRo: 'Da! Suntem LiberCons Prim SRL, companie înregistrată oficial. Lucrăm cu persoane juridice și fizice, oferim contract de servicii, factură fiscală cu TVA și operatori autorizați.',
+      aRu: 'Да, работаем официально с юр. и физ. лицами по договору, предоставляем налоговые накладные с НДС.'
+    },
+    {
+      qRo: 'Care este comanda minimă și cum se calculează prețul?',
+      qRu: 'Каков минимальный заказ и как формируется цена?',
+      aRo: 'Tarifele sunt competitive și transparente. Comanda minimă este de 2-3 ore în Chișinău. Pentru proiecte mari sau închirieri pe termen lung oferim prețuri speciale. Sunați la 069 547 396 pentru ofertă exactă.',
+      aRu: 'Минимальный заказ обычно составляет 2-3 часа. Для длительных проектов действуют специальные скидки. Звоните 069 547 396 для точного расчета.'
+    },
+    {
+      qRo: 'Lucrați non-stop (24/7) și în weekend?',
+      qRu: 'Работаете ли вы круглосуточно (24/7) и в выходные?',
+      aRo: 'Da, dispeceratul și utilajul nostru sunt active 24/7, inclusiv în weekend și de sărbători, pentru situații urgente pe șantier sau manevre nocturne în zone aglomerate.',
+      aRu: 'Да, бригада и диспетчер работают 24/7 без выходных, включая ночные смены и срочные аварийные работы.'
+    }
+  ];
 
   const handleCopyPhone = (number: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -46,6 +82,12 @@ export default function App() {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setQuoteSubmitted(true);
+
+    // Forward lead data directly to WhatsApp so Vadim receives the request instantly
+    const msg = `Bună ziua! Solicit ofertă automacara (automacara.md):\n• Nume: ${formData.name}\n• Telefon: ${formData.phone}\n• Locație: ${formData.location || 'Chișinău'}\n• Tip lucrare: ${formData.workType}`;
+    const whatsappUrl = `https://wa.me/37369547396?text=${encodeURIComponent(msg)}`;
+    window.open(whatsappUrl, '_blank');
+
     setTimeout(() => {
       setShowQuoteModal(false);
       setQuoteSubmitted(false);
@@ -646,6 +688,52 @@ export default function App() {
             <p className="text-xs text-slate-300 leading-relaxed">
               Intervenim prompt în toate sectoarele din Chișinău: <strong>Botanica, Buiucani, Centru, Ciocana, Rîșcani, Poșta Veche</strong> și suburbii (Ialoveni, Strășeni, Cricova, Sîngera, Bubuieci), precum și pe întreg teritoriul Republicii Moldova.
             </p>
+          </div>
+
+          {/* FAQ Section (Întrebări Frecvente & Вопросы и ответы) */}
+          <div className="bg-[#162036] rounded-2xl p-4 border border-slate-700/70 shadow-lg space-y-3.5">
+            <div>
+              <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase flex items-center gap-1.5">
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>ÎNTREBĂRI FRECVENTE • ЧАСТЫЕ ВОПРОСЫ</span>
+              </span>
+              <h2 className="text-base font-black text-white uppercase tracking-tight">
+                INFORMAȚII UTILE & <span className="text-[#eab308]">TARIFE MACARA</span>
+              </h2>
+            </div>
+
+            <div className="space-y-2">
+              {faqs.map((faq, idx) => (
+                <div
+                  key={idx}
+                  className="bg-[#131b2e] rounded-xl border border-slate-700/60 overflow-hidden transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                    className="w-full p-3 text-left flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-800/40 transition-colors"
+                  >
+                    <div>
+                      <span className="text-xs font-bold text-white block">{faq.qRo}</span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">{faq.qRu}</span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-amber-400 shrink-0 transition-transform duration-200 ${
+                        openFaq === idx ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  {openFaq === idx && (
+                    <div className="px-3 pb-3 pt-1 text-xs border-t border-slate-800/80 space-y-1.5 animate-fadeIn">
+                      <p className="text-slate-300 leading-relaxed">{faq.aRo}</p>
+                      <p className="text-[11px] text-slate-400 italic border-l-2 border-amber-400/50 pl-2">
+                        {faq.aRu}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Legal & Company Footer Information */}

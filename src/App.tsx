@@ -315,18 +315,9 @@ export default function App() {
           <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-[#131b2e] shadow-xl">
             <div className="relative h-56 w-full overflow-hidden bg-slate-900">
               <img
-                src="https://lh3.googleusercontent.com/aida/ALJJyrB8R3sIbnwgBbs_xAttvWzotYNrkWmpB94Z0rxNBt4trN5iQvOUu6w2XRg6JYRFz4Av2BhjYqHsZAty2ZW7TWxfUFnpWk-J8TBdAo2k0EFuhM1LW8xJg-0275hZcR6alVaNXsnGDzILHgEhBZP-0ZksFhREAjlgCTmFh7tYIemZSPK_ouTZdCsaj1bSS8h0XIknzJEvVGTczyPvJQ3Y1jHjEtREGv8ZR1-isJ7UaWzR"
+                src="/crane-hero.jpg"
                 alt="Automacara XCMG 25 tone la lucru pe șantier în Chișinău"
                 className="w-full h-full object-cover object-center"
-                onError={(e) => {
-                  // Fallback to high resolution industrial crane image
-                  const target = e.currentTarget;
-                  if (!target.dataset.fallback) {
-                    target.dataset.fallback = 'true';
-                    target.src =
-                      'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80';
-                  }
-                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0b1326] via-[#0b1326]/40 to-transparent"></div>
 

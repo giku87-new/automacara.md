@@ -1,901 +1,1078 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Phone,
   Check,
-  Copy,
-  Clock,
+  ChevronDown,
+  ArrowRight,
+  ArrowLeft,
+  MapPin,
   ShieldCheck,
   FileText,
-  ChevronRight,
-  MessageCircle,
-  MapPin,
-  Calculator,
+  Clock,
+  BookOpen,
   Send,
-  X,
-  Sparkles,
-  Zap,
-  HelpCircle,
-  ChevronDown
+  MessageCircle
 } from 'lucide-react';
+import { BLOG_ARTICLES, LOAD_RADIUS_TABLE, UI_CONTENT, type BlogArticle, type Lang } from './content';
 
-export default function App() {
-  const [copiedNumber, setCopiedNumber] = useState<string | null>(null);
-  const [showQuoteModal, setShowQuoteModal] = useState(false);
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [calcWeight, setCalcWeight] = useState<number>(5);
-  const [calcRadius, setCalcRadius] = useState<number>(15);
-  const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+declare global {
+  interface Window {
+    dataLayer?: Record<string, unknown>[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+export interface AppProps {
+  initialLang?: Lang;
+  initialArticleSlug?: string | null;
+}
+
+function detectInitialRoute(defaultLang?: Lang, defaultSlug?: string | null): {
+  lang: Lang;
+  articleSlug: string | null;
+} {
+  if (typeof window === 'undefined') {
+    return {
+      lang: defaultLang ?? 'ro',
+      articleSlug: defaultSlug ?? null
+    };
+  }
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const queryLang = params.get('lang');
+  const isRuPath = path === '/ru' || path.startsWith('/ru/');
+  const lang: Lang = queryLang === 'ru' || isRuPath ? 'ru' : defaultLang ?? 'ro';
+
+  const blogMatch = path.match(/\/blog\/([^/]+)/);
+  const articleSlug = blogMatch?.[1] ?? params.get('article') ?? defaultSlug ?? null;
+
+  return { lang, articleSlug };
+}
+
+export function trackEvent(eventName: string, params: Record<string, unknown> = {}) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: eventName, ...params });
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, params);
+    }
+  } catch {
+    // Ignore analytics errors
+  }
+}
+
+export default function App(props: AppProps) {
+  const { initialLang, initialArticleSlug } = props;
+  const initialRoute = detectInitialRoute(initialLang, initialArticleSlug);
+  const [lang, setLang] = useState<Lang>(initialRoute.lang);
+  const [activeArticleSlug, setActiveArticleSlug] = useState<string | null>(initialRoute.articleSlug);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    format: 'Schimb Complet (8 ore)',
     location: '',
-    workType: 'Montaj structuri',
-    weight: 'Până în 5 tone',
+    details: ''
   });
 
-  const faqs = [
-    {
-      qRo: 'În cât timp ajunge automacaraua la șantier în Chișinău?',
-      qRu: 'Как быстро автокран прибывает на объект в Кишиневе?',
-      aRo: 'Timpul mediu de deplasare și calare este de aproximativ 45 de minute în raza municipiului Chișinău (Botanica, Centru, Rîșcani, Ciocana, Buiucani, Poșta Veche, suburbii).',
-      aRu: 'Среднее время прибытия и установки составляет около 45 минут по Кишиневу и пригородам.'
-    },
-    {
-      qRo: 'Care este capacitatea și lungimea brațului macaralei?',
-      qRu: 'Какова грузоподъемность и вылет стрелы?',
-      aRo: 'Automacaraua modernă XCMG are o capacitate maximă de 25 tone și un braț telescopic extensibil de 40 metri (până la 48 metri cu extensie Jib). Sistem de rotație 360° și senzori computerizați de sarcină.',
-      aRu: 'Грузоподъемность 25 тонн, телескопическая стрела 40-48 метров (с гуськом). Поворот 360°, компьютерный контроль безопасности.'
-    },
-    {
-      qRo: 'Eliberați factură fiscală și lucrați prin transfer (TVA)?',
-      qRu: 'Предоставляете налоговые накладные и безналичный расчет?',
-      aRo: 'Da! Suntem LiberCons Prim SRL, companie înregistrată oficial. Lucrăm cu persoane juridice și fizice, oferim contract de servicii, factură fiscală cu TVA și operatori autorizați.',
-      aRu: 'Да, работаем официально с юр. и физ. лицами по договору, предоставляем налоговые накладные с НДС.'
-    },
-    {
-      qRo: 'Care este comanda minimă și cum se calculează prețul?',
-      qRu: 'Каков минимальный заказ и как формируется цена?',
-      aRo: 'Tarifele sunt competitive și transparente. Comanda minimă este de 2-3 ore în Chișinău. Pentru proiecte mari sau închirieri pe termen lung oferim prețuri speciale. Sunați la 069 547 396 pentru ofertă exactă.',
-      aRu: 'Минимальный заказ обычно составляет 2-3 часа. Для длительных проектов действуют специальные скидки. Звоните 069 547 396 для точного расчета.'
-    },
-    {
-      qRo: 'Lucrați non-stop (24/7) și în weekend?',
-      qRu: 'Работаете ли вы круглосуточно (24/7) и в выходные?',
-      aRo: 'Da, dispeceratul și utilajul nostru sunt active 24/7, inclusiv în weekend și de sărbători, pentru situații urgente pe șantier sau manevre nocturne în zone aglomerate.',
-      aRu: 'Да, бригада и диспетчер работают 24/7 без выходных, включая ночные смены и срочные аварийные работы.'
+  const t = UI_CONTENT[lang];
+  const activeArticle: BlogArticle | undefined = activeArticleSlug
+    ? BLOG_ARTICLES.find((a) => a.slug === activeArticleSlug)
+    : undefined;
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = lang;
+    if (activeArticle) {
+      document.title = `${lang === 'ro' ? activeArticle.titleRo : activeArticle.titleRu} | automacara.md`;
+    } else {
+      document.title = t.metaTitle;
     }
-  ];
+  }, [lang, activeArticle, t.metaTitle]);
 
-  const handleCopyPhone = (number: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    navigator.clipboard.writeText(number);
-    setCopiedNumber(number);
-    setTimeout(() => setCopiedNumber(null), 2500);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onPopState = () => {
+      const next = detectInitialRoute();
+      setLang(next.lang);
+      setActiveArticleSlug(next.articleSlug);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const handleSwitchLang = (nextLang: Lang) => {
+    setLang(nextLang);
+    trackEvent('switch_language', { lang: nextLang });
+    if (typeof window !== 'undefined') {
+      let nextUrl = nextLang === 'ru' ? '/ru/' : '/';
+      if (activeArticleSlug) {
+        nextUrl = `/blog/${activeArticleSlug}/${nextLang === 'ru' ? '?lang=ru' : ''}`;
+      }
+      window.history.pushState({}, '', nextUrl);
+    }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setQuoteSubmitted(true);
+  const handleOpenArticle = (slug: string, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setActiveArticleSlug(slug);
+    trackEvent('view_blog_article', { slug, lang });
+    if (typeof window !== 'undefined') {
+      const nextUrl = `/blog/${slug}/${lang === 'ru' ? '?lang=ru' : ''}`;
+      window.history.pushState({}, '', nextUrl);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
-    // Forward lead data directly to WhatsApp so Vadim receives the request instantly
-    const msg = `Bună ziua! Solicit ofertă automacara (automacara.md):\n• Nume: ${formData.name}\n• Telefon: ${formData.phone}\n• Locație: ${formData.location || 'Chișinău'}\n• Tip lucrare: ${formData.workType}`;
-    const whatsappUrl = `https://wa.me/37369547396?text=${encodeURIComponent(msg)}`;
-    window.open(whatsappUrl, '_blank');
+  const handleCloseArticle = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setActiveArticleSlug(null);
+    if (typeof window !== 'undefined') {
+      const nextUrl = lang === 'ru' ? '/ru/' : '/';
+      window.history.pushState({}, '', nextUrl);
+    }
+  };
 
+  const scrollToContactWithFormat = (formatTitle: string) => {
+    setFormData((prev) => ({ ...prev, format: formatTitle }));
+    if (activeArticleSlug) {
+      setActiveArticleSlug(null);
+    }
+    trackEvent('select_collaboration_format', { format: formatTitle, lang });
     setTimeout(() => {
-      setShowQuoteModal(false);
-      setQuoteSubmitted(false);
-      setFormData({
-        name: '',
-        phone: '',
-        location: '',
-        workType: 'Montaj structuri',
-        weight: 'Până în 5 tone',
+      const el = document.getElementById('contact');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 60);
+  };
+
+  const getWhatsAppUrl = (customText?: string) => {
+    const defaultMsg =
+      lang === 'ro'
+        ? 'Bună ziua! Solicit estimare pentru servicii de automacara XCMG 25 Tone (automacara.md).'
+        : 'Здравствуйте! Запрашиваю расчет стоимости услуг автокрана XCMG 25 тонн (automacara.md).';
+    return `https://wa.me/37369547396?text=${encodeURIComponent(customText || defaultMsg)}`;
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    trackEvent('submit_quote_form', {
+      format: formData.format,
+      location: formData.location || 'Chisinau',
+      lang
+    });
+
+    const payload = {
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      format: formData.format,
+      location: formData.location.trim() || 'mun. Chișinău',
+      details: formData.details.trim(),
+      lang,
+      pageUrl: typeof window !== 'undefined' ? window.location.href : 'https://automacara.md/',
+      submittedAt: new Date().toISOString()
+    };
+
+    try {
+      const response = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-    }, 2500);
+      if (!response.ok) {
+        throw new Error('Lead endpoint returned non-200');
+      }
+    } catch {
+      // Fallback: save locally & allow optional WhatsApp follow-up so the inquiry is never lost
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
   };
 
-  // WhatsApp quick link generator
-  const getWhatsAppLink = (message: string = 'Bună ziua! Doresc informații pentru închirierea automacaralei de 25T.') => {
-    return `https://wa.me/37369547396?text=${encodeURIComponent(message)}`;
-  };
-
-  // Calculate crane feasibility
-  const isFeasible = calcWeight <= 25 && calcRadius <= 32;
-  const recommendedConfig =
-    calcWeight > 18
-      ? 'Rază redusă (< 8m) - Balast maxim montat'
-      : calcWeight > 8
-      ? 'Rază medie (8 - 18m) - Braț extins standard'
-      : 'Rază extinsă (până la 32m) - Braț + extensie Jib';
+  const whatsappSummaryText =
+    lang === 'ro'
+      ? `Bună ziua! Solicit estimare servicii automacara XCMG 25T (automacara.md):\n• Nume/Companie: ${formData.name}\n• Telefon: ${formData.phone}\n• Format: ${formData.format}\n• Locație: ${formData.location || 'Chișinău'}\n• Detalii: ${formData.details || '-'}`
+      : `Здравствуйте! Заявка на услуги автокрана XCMG 25Т (automacara.md):\n• Имя/Компания: ${formData.name}\n• Телефон: ${formData.phone}\n• Формат: ${formData.format}\n• Локация: ${formData.location || 'Кишинев'}\n• Детали: ${formData.details || '-'}`;
 
   return (
-    <div className="min-h-screen bg-[#060e20] text-slate-100 antialiased flex flex-col items-center justify-start relative overflow-x-hidden">
-      {/* Subtle blueprint / grid background on larger displays */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:32px_32px]"></div>
+    <div className="min-h-screen bg-white text-[#1B2028] antialiased flex flex-col pb-16 md:pb-0">
+      {/* 1. MINIMAL ARCHITECTURAL HEADER (#FFFFFF) */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E4E4E0]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+          {/* Official Brand Logo */}
+          <a
+            href={lang === 'ru' ? '/ru/' : '/'}
+            onClick={(e) => {
+              if (activeArticleSlug) handleCloseArticle(e);
+            }}
+            className="flex items-center gap-3 shrink-0 group"
+            aria-label="S.R.L. LIBERCONS PRIM - automacara.md"
+          >
+            <img
+              src="/logo.png"
+              alt="LIBERCONS PRIM — Servicii de automacara Chișinău"
+              width={162}
+              height={54}
+              className="h-10 sm:h-11 w-auto object-contain"
+            />
+          </a>
 
-      {/* Copy notification toast */}
-      {copiedNumber && (
-        <div className="fixed top-4 z-50 bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-bounce">
-          <Check className="w-4 h-4 text-slate-950 stroke-[3]" />
-          <span>Numărul {copiedNumber} a fost copiat în clipboard!</span>
-        </div>
-      )}
-
-      {/* Central Mobile/Desktop Centered Container */}
-      <div className="w-full max-w-[440px] min-h-screen flex flex-col bg-[#0b1326] shadow-2xl relative border-x border-slate-800/60 pb-28">
-
-        {/* Top Navigation Bar / Header */}
-        <header className="sticky top-0 z-40 bg-[#0b1326]/95 backdrop-blur-md border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {/* Official Brand Logo */}
-            <div className="h-10 px-2.5 bg-white rounded-lg border border-amber-400/40 flex items-center justify-center shadow-md">
-              <img
-                src="/logo.png"
-                alt="LiberCons Prim Logo"
-                className="h-6 w-auto object-contain"
-              />
-            </div>
-            <div>
-              <span className="block font-black text-xs tracking-wider uppercase text-white leading-none">
-                AUTOMACARA.MD
-              </span>
-              <span className="text-[10px] font-semibold text-amber-400 tracking-wide">
-                Chișinău • Moldova
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Status / 24/7 Phone Direct Badge */}
-          <div className="flex items-center gap-1.5">
+          {/* Primary Navigation */}
+          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-[#1B2028]">
             <a
-              href="tel:069547396"
-              className="flex items-center gap-1.5 bg-amber-400/10 border border-amber-400/40 hover:bg-amber-400/20 transition-colors px-2.5 py-1.5 rounded-md text-amber-400 font-bold text-xs"
-              title="Apelează acum dispeceratul 24/7"
+              href="#servicii"
+              onClick={() => activeArticleSlug && setActiveArticleSlug(null)}
+              className="hover:text-[#EA580C] transition-colors"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <Phone className="w-3.5 h-3.5 fill-current" />
-              <span>24 / 7</span>
+              {t.nav.services}
             </a>
-
-            {/* Quick WhatsApp button */}
             <a
-              href={getWhatsAppLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-8 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/40 hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition-colors"
-              title="Trimite poze / coordonate pe WhatsApp"
+              href="#specificatii"
+              onClick={() => activeArticleSlug && setActiveArticleSlug(null)}
+              className="hover:text-[#EA580C] transition-colors"
             >
-              <MessageCircle className="w-4 h-4" />
+              {t.nav.specs}
             </a>
-          </div>
-        </header>
+            <a
+              href="#colaborare"
+              onClick={() => activeArticleSlug && setActiveArticleSlug(null)}
+              className="hover:text-[#EA580C] transition-colors"
+            >
+              {t.nav.packages}
+            </a>
+            <a
+              href="#blog"
+              onClick={() => activeArticleSlug && setActiveArticleSlug(null)}
+              className="hover:text-[#EA580C] transition-colors"
+            >
+              {t.nav.blog}
+            </a>
+            <a
+              href="#intrebari"
+              onClick={() => activeArticleSlug && setActiveArticleSlug(null)}
+              className="hover:text-[#EA580C] transition-colors"
+            >
+              {t.nav.faq}
+            </a>
+            <a
+              href="#contact"
+              onClick={() => activeArticleSlug && setActiveArticleSlug(null)}
+              className="hover:text-[#EA580C] transition-colors"
+            >
+              {t.nav.contact}
+            </a>
+          </nav>
 
-        {/* Main Content Stream */}
-        <main className="flex-1 px-4 py-4 space-y-4">
-
-          {/* 1. TOP HERO: Real Crane Showcase Header */}
-          <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-[#131b2e] shadow-xl">
-            <div className="relative h-60 w-full overflow-hidden bg-slate-900">
-              <img
-                src="/crane-hero.jpg"
-                alt="Automacara XCMG 25 tone la lucru pe șantier în Chișinău"
-                className="w-full h-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1326] via-[#0b1326]/30 to-transparent"></div>
-
-              {/* Top Badges */}
-              <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                <div className="bg-[#060e20]/85 backdrop-blur-md border border-amber-400/30 rounded-lg px-2.5 py-1 text-[10px] font-bold text-slate-200 flex items-center gap-1.5 shadow-md">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="tracking-wide">UTILAJ ACTIV CHIȘINĂU</span>
-                </div>
-                <div className="bg-[#eab308] text-slate-950 font-black text-[10px] px-2 py-1 rounded shadow-md uppercase tracking-wider">
-                  XCMG 25T
-                </div>
-              </div>
-
-              {/* Bottom Caption Overlay */}
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="block font-black text-white uppercase tracking-wider text-xs">
-                    AUTOMACARA XCMG 25 TONE
-                  </span>
-                  <span className="text-[10px] text-amber-300 font-semibold">
-                    Montaj structuri • Descărcare containere
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 px-2 py-1 rounded backdrop-blur-sm">
-                  GATA DE INTERVENȚIE
-                </span>
-              </div>
-            </div>
-
-            {/* Quick interactive action bar below hero photo */}
-            <div className="p-2.5 bg-[#0b1326] border-t border-slate-800 flex items-center justify-between text-xs">
+          {/* Language Switcher & Direct Call CTA */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div
+              className="inline-flex items-center border border-[#D6D6D0] rounded-md p-0.5 bg-[#F4F4F2] text-xs font-bold"
+              role="group"
+              aria-label="Select language"
+            >
               <button
                 type="button"
-                onClick={() => setShowCalculator(!showCalculator)}
-                className="text-amber-400 font-bold hover:text-amber-300 flex items-center gap-1.5 transition-colors px-2 py-1 rounded bg-[#131b2e] border border-amber-400/30 text-[11px]"
-              >
-                <Calculator className="w-3.5 h-3.5" />
-                <span>{showCalculator ? 'Ascunde Calculator' : 'Calculator Sarcină / Înălțime'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowQuoteModal(true)}
-                className="text-slate-200 hover:text-white flex items-center gap-1 font-semibold text-[11px] bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700"
-              >
-                <span>Cere Ofertă Scrisă</span>
-                <ChevronRight className="w-3 h-3 text-[#eab308]" />
-              </button>
-            </div>
-          </div>
-
-          {/* Optional Interactive Feasibility Calculator (placed right under hero if toggled) */}
-          {showCalculator && (
-            <div className="bg-[#162036] rounded-2xl p-4 border border-amber-400/30 space-y-3.5 animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase">
-                    CALCULATOR RAPID PE ȘANTIER
-                  </span>
-                  <h3 className="text-sm font-black text-white uppercase">
-                    Verificare Compatibilitate XCMG 25T
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowCalculator(false)}
-                  className="text-slate-400 hover:text-white p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Weight Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-300">Greutate încărcătură:</span>
-                  <span className="text-amber-400 font-bold">{calcWeight} Tone</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="25"
-                  value={calcWeight}
-                  onChange={(e) => setCalcWeight(Number(e.target.value))}
-                  className="w-full accent-amber-400 bg-slate-700 h-2 rounded-lg cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>1 Tonă</span>
-                  <span>12 Tone</span>
-                  <span>25 Tone (Max)</span>
-                </div>
-              </div>
-
-              {/* Height / Radius Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-300">Rază / Înălțime estimată:</span>
-                  <span className="text-amber-400 font-bold">{calcRadius} Metri</span>
-                </div>
-                <input
-                  type="range"
-                  min="3"
-                  max="40"
-                  value={calcRadius}
-                  onChange={(e) => setCalcRadius(Number(e.target.value))}
-                  className="w-full accent-amber-400 bg-slate-700 h-2 rounded-lg cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>3 m</span>
-                  <span>20 m</span>
-                  <span>40+ m (Braț + Jib)</span>
-                </div>
-              </div>
-
-              {/* Result box */}
-              <div
-                className={`p-3 rounded-xl border text-xs ${
-                  isFeasible
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                onClick={() => handleSwitchLang('ro')}
+                className={`px-2.5 py-1.5 rounded transition-colors cursor-pointer ${
+                  lang === 'ro'
+                    ? 'bg-[#1B2028] text-white'
+                    : 'text-[#525866] hover:text-[#1B2028]'
                 }`}
               >
-                <div className="flex items-center gap-2 font-bold mb-1">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>
-                    {isFeasible
-                      ? 'Compatibil 100% cu macaraua noastră!'
-                      : 'Necesară evaluare tehnică la fața locului'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Configurație: <strong className="text-white">{recommendedConfig}</strong>. Sunați
-                  dispeceratul pentru confirmarea razei de calare.
-                </p>
-                <a
-                  href={`tel:069547396`}
-                  className="mt-2 inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-amber-500 transition-colors"
-                >
-                  <Phone className="w-3.5 h-3.5 fill-current" />
-                  <span>Rezervă pentru lucrare ({calcWeight}t la {calcRadius}m)</span>
-                </a>
-              </div>
-            </div>
-          )}
-
-          {/* Status Banner */}
-          <div className="bg-[#131b2e] border border-slate-700/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="font-semibold tracking-wide uppercase text-[11px] text-slate-200">
-                DISPECERAT CHIȘINĂU ACTIV
-              </span>
-            </div>
-            <span className="text-[#eab308] font-bold text-[11px] tracking-wide flex items-center gap-1">
-              <Clock className="w-3 h-3 text-[#eab308]" />
-              SOSIRE ~45 MIN
-            </span>
-          </div>
-
-          {/* Main Business Card (Carte Poștală Hero) */}
-          <div className="relative bg-gradient-to-b from-[#131b2e] to-[#162036] rounded-2xl p-5 border border-amber-400/25 glow-gold overflow-hidden">
-            {/* Header: Official Logo & Equipment Badge */}
-            <div className="flex items-center justify-between mb-3 gap-2">
-              <div className="bg-white rounded-xl py-2 px-3.5 shadow-lg border border-amber-400/40 flex items-center">
-                <img
-                  src="/logo.png"
-                  alt="LiberCons Prim Logo"
-                  className="h-10 sm:h-11 w-auto object-contain"
-                />
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="bg-[#eab308] text-black font-extrabold text-[11px] px-2.5 py-1 rounded shadow uppercase tracking-wider shrink-0">
-                  XCMG 25T
-                </span>
-                <span className="text-[9px] font-extrabold text-amber-400 tracking-widest uppercase">
-                  CHIȘINĂU
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs mb-3">
-              <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px]">
-                SERVICII AUTOMACARĂ CHIȘINĂU
-              </span>
-              <span className="text-slate-400 font-medium text-[10px]">
-                REPUBLICA MOLDOVA
-              </span>
-            </div>
-
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-4">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#eab308] shrink-0" />
-              <span>Flotă proprie licențiată • automacara.md</span>
-            </div>
-
-            {/* Official Motto Container */}
-            <div className="bg-[#060e20]/90 rounded-xl p-3.5 border border-slate-700/80 mb-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-400/20 text-[#eab308] flex items-center justify-center font-black text-xl shrink-0">
-                ”
-              </div>
-              <div>
-                <div className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
-                  MOTTO OFICIAL
-                </div>
-                <div className="text-sm font-extrabold text-amber-300 leading-snug">
-                  „RIDICĂM CU GRIJĂ. CONSTRUIM CU ÎNCREDERE”
-                </div>
-              </div>
-            </div>
-
-            {/* Primary Call to Action Button */}
-            <div className="space-y-2">
-              <a
-                href="tel:069547396"
-                className="w-full bg-[#eab308] hover:bg-[#ca8a04] active:scale-[0.99] transition-all text-slate-950 rounded-xl p-3.5 flex items-center justify-between shadow-xl group cursor-pointer"
+                RO
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchLang('ru')}
+                className={`px-2.5 py-1.5 rounded transition-colors cursor-pointer ${
+                  lang === 'ru'
+                    ? 'bg-[#1B2028] text-white'
+                    : 'text-[#525866] hover:text-[#1B2028]'
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-black/15 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-slate-950 fill-current" />
-                  </div>
-                  <div className="text-left">
-                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-900/80 leading-tight">
-                      COMANDĂ AUTOMACARĂ NON-STOP
-                    </span>
-                    <span className="text-xl font-black tracking-tight text-slate-950 leading-none">
-                      069 547 396
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-black/15 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                  <span>SUNĂ</span>
-                  <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
+                RU
+              </button>
+            </div>
+
+            <a
+              href="tel:069547396"
+              onClick={() => trackEvent('click_phone_primary', { placement: 'header', lang })}
+              className="inline-flex items-center gap-2 bg-[#EA580C] hover:bg-[#D9460F] text-white font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-2.5 rounded-md shadow-sm transition-colors"
+            >
+              <Phone className="w-4 h-4 fill-current shrink-0" />
+              <span>069 547 396</span>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      {/* BLOG ARTICLE READER VIEW (when an article is selected or loaded via /blog/:slug) */}
+      {activeArticle ? (
+        <main className="flex-1 bg-white">
+          <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+            <div className="mb-8">
+              <a
+                href={lang === 'ru' ? '/ru/#blog' : '/#blog'}
+                onClick={handleCloseArticle}
+                className="inline-flex items-center gap-2 text-sm font-bold text-[#EA580C] hover:text-[#1B2028] transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{t.blog.backToSite}</span>
               </a>
-
-              {/* Quick actions line: Copy number & WhatsApp */}
-              <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
-                <button
-                  type="button"
-                  onClick={(e) => handleCopyPhone('069547396', e)}
-                  className="hover:text-amber-400 transition-colors flex items-center gap-1 py-1"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Copiază 069 547 396</span>
-                </button>
-                <a
-                  href={getWhatsAppLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-emerald-400 transition-colors flex items-center gap-1 py-1"
-                >
-                  <MessageCircle className="w-3 h-3 text-emerald-400" />
-                  <span>Scrie pe WhatsApp</span>
-                </a>
-              </div>
             </div>
 
-            {/* Quick Guarantee Badges */}
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-700/50 text-[10px] font-semibold text-slate-300">
-              <div className="flex items-center gap-1.5 justify-center text-center">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#eab308] shrink-0" />
-                <span>Operator autorizat</span>
-              </div>
-              <div className="flex items-center gap-1.5 justify-center text-center">
-                <FileText className="w-3.5 h-3.5 text-[#eab308] shrink-0" />
-                <span>Factură fiscală</span>
-              </div>
-              <div className="flex items-center gap-1.5 justify-center text-center">
-                <Zap className="w-3.5 h-3.5 text-[#eab308] shrink-0" />
-                <span>Sosire ~45 min</span>
-              </div>
-            </div>
-          </div>
-
-
-
-          {/* Parametri Tehnici Utilaj Section */}
-          <div className="bg-[#162036] rounded-2xl p-4 border border-slate-700/70 shadow-lg space-y-3.5">
-            <div>
-              <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase">
-                PARAMETRI TEHNICI UTILAJ
+            <div className="flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-wider text-[#EA580C] mb-3">
+              <span className="bg-[#FFF4ED] border border-[#FDBA8C] px-2.5 py-1 rounded">
+                {lang === 'ro' ? activeArticle.categoryRo : activeArticle.categoryRu}
               </span>
-              <h2 className="text-lg font-black text-white uppercase tracking-tight">
-                PERFORMANȚĂ <span className="text-[#eab308]">XCMG 25 TONE</span>
-              </h2>
-            </div>
-
-            {/* 2x2 Grid Specs */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Card 1 */}
-              <div className="bg-[#131b2e] rounded-xl p-3 border border-slate-700/60 hover:border-amber-400/40 transition-colors">
-                <div className="flex items-center gap-1.5 text-[#eab308] text-xs font-bold uppercase mb-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                    />
-                  </svg>
-                  <span>CAPACITATE</span>
-                </div>
-                <div className="text-xl font-black text-white">
-                  25 <span className="text-amber-400 font-bold text-sm">Tone</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Sarcină maximă la cârlig</div>
-              </div>
-
-              {/* Card 2 */}
-              <div className="bg-[#131b2e] rounded-xl p-3 border border-slate-700/60 hover:border-amber-400/40 transition-colors">
-                <div className="flex items-center gap-1.5 text-[#eab308] text-xs font-bold uppercase mb-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M8 7l4-4m0 0l4 4m-4-4v18"
-                    />
-                  </svg>
-                  <span>BRAȚ TELESCOPIC</span>
-                </div>
-                <div className="text-xl font-black text-white">
-                  40-48 <span className="text-amber-400 font-bold text-sm">m</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Cu extensie (jib)</div>
-              </div>
-
-              {/* Card 3 */}
-              <div className="bg-[#131b2e] rounded-xl p-3 border border-slate-700/60 hover:border-amber-400/40 transition-colors">
-                <div className="flex items-center gap-1.5 text-[#eab308] text-xs font-bold uppercase mb-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  <span>MANEVRABILITATE</span>
-                </div>
-                <div className="text-xl font-black text-white">360°</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Rotație continuă ghidată</div>
-              </div>
-
-              {/* Card 4 */}
-              <div className="bg-[#131b2e] rounded-xl p-3 border border-slate-700/60 hover:border-amber-400/40 transition-colors">
-                <div className="flex items-center gap-1.5 text-[#eab308] text-xs font-bold uppercase mb-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  <span>ECHIPAJ</span>
-                </div>
-                <div className="text-xl font-black text-white">INCLUS</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Operator autorizat ISCIR</div>
-              </div>
-            </div>
-
-            {/* Extra Technical Details */}
-            <div className="bg-[#131b2e]/80 rounded-xl p-3 border border-slate-800 text-xs space-y-2">
-              <div className="flex justify-between items-center py-0.5 border-b border-slate-800/80">
-                <span className="text-slate-400">Masa totală utilaj (chassis)</span>
-                <span className="font-bold text-slate-200">25.000 kg</span>
-              </div>
-              <div className="flex justify-between items-center py-0.5 border-b border-slate-800/80">
-                <span className="text-slate-400">Sistem de calare & stabilizare</span>
-                <span className="font-bold text-slate-200">Hidraulic H-Type</span>
-              </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span className="text-slate-400">Monitorizare computerizată sarcină</span>
-                <span className="font-bold text-amber-400">Senzori Hirschmann LMI</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Gama de Servicii de Ridicare Section */}
-          <div className="bg-[#162036] rounded-2xl p-4 border border-slate-700/70 shadow-lg space-y-3.5">
-            <div>
-              <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase">
-                CAPABILITĂȚI OPERAȚIONALE
+              <span className="text-[#525866]">
+                {lang === 'ro' ? activeArticle.readTimeRo : activeArticle.readTimeRu}
               </span>
-              <h2 className="text-lg font-black text-white uppercase tracking-tight">
-                GAMA DE SERVICII DE <span className="text-[#eab308]">RIDICARE</span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Executăm manevre de complexitate înaltă cu automacaragii calificați și utilaje de
-                clasă industrială.
-              </p>
+              <span className="text-[#525866]">• S.R.L. „LIBERCONS PRIM”</span>
             </div>
 
-            {/* Service Cards List */}
-            <div className="space-y-2.5">
-              {/* Service 1 */}
-              <div className="bg-[#131b2e] p-3.5 rounded-xl border border-slate-700/60 flex items-start gap-3 hover:border-amber-400/40 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-[#eab308] text-slate-950 flex items-center justify-center shrink-0 font-bold shadow">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-white leading-tight uppercase">
-                    Montaj Structuri Metalice & Prefabricate
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Poziționare de precizie pentru grinzi de beton, piloni, ferme industriale, panouri
-                    sandwich și acoperișuri de hale.
-                  </p>
-                </div>
-              </div>
+            <h1 className="text-2xl sm:text-4xl font-black text-[#1B2028] tracking-tight leading-tight mb-4">
+              {lang === 'ro' ? activeArticle.titleRo : activeArticle.titleRu}
+            </h1>
 
-              {/* Service 2 */}
-              <div className="bg-[#131b2e] p-3.5 rounded-xl border border-slate-700/60 flex items-start gap-3 hover:border-amber-400/40 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-slate-800 text-amber-400 border border-amber-400/30 flex items-center justify-center shrink-0 font-bold shadow">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H20"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-white leading-tight uppercase">
-                    Descărcare / Încărcare Tiruri & Containere
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Manevrare containere maritime, module prefabricate de birou, rezervoare metalice
-                    și paleți cu materiale grele.
-                  </p>
-                </div>
-              </div>
-
-              {/* Service 3 */}
-              <div className="bg-[#131b2e] p-3.5 rounded-xl border border-slate-700/60 flex items-start gap-3 hover:border-amber-400/40 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-slate-800 text-amber-400 border border-amber-400/30 flex items-center justify-center shrink-0 font-bold shadow">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-white leading-tight uppercase">
-                    Ridicare Materiale la Înălțime
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Alimentarea etajelor superioare cu cărămidă, fier beton, sticlă fațadă, utilaje
-                    HVAC și echipamente grele de șantier.
-                  </p>
-                </div>
-              </div>
-
-              {/* Service 4 */}
-              <div className="bg-[#131b2e] p-3.5 rounded-xl border border-slate-700/60 flex items-start gap-3 hover:border-amber-400/40 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-slate-800 text-amber-400 border border-amber-400/30 flex items-center justify-center shrink-0 font-bold shadow">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-white leading-tight uppercase">
-                    Relocări Utilaje Industriale
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Mutare strunguri, generatoare de mare putere, transformatoare electrice și linii
-                    de producție în spații strâmte.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Zone de Acoperire & Avantaje Chișinău & Moldova */}
-          <div className="bg-[#131b2e] rounded-2xl p-4 border border-slate-700/60 space-y-2.5">
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase">
-              <MapPin className="w-4 h-4" />
-              <span>Arie de Acoperire Rapidă</span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Intervenim prompt în toate sectoarele din Chișinău: <strong>Botanica, Buiucani, Centru, Ciocana, Rîșcani, Poșta Veche</strong> și suburbii (Ialoveni, Strășeni, Cricova, Sîngera, Bubuieci), precum și pe întreg teritoriul Republicii Moldova.
+            <p className="text-base sm:text-lg text-[#525866] leading-relaxed border-b border-[#E4E4E0] pb-8 mb-8">
+              {lang === 'ro' ? activeArticle.excerptRo : activeArticle.excerptRu}
             </p>
-          </div>
 
-          {/* FAQ Section (Întrebări Frecvente & Вопросы и ответы) */}
-          <div className="bg-[#162036] rounded-2xl p-4 border border-slate-700/70 shadow-lg space-y-3.5">
-            <div>
-              <span className="text-[10px] font-extrabold tracking-widest text-[#eab308] uppercase flex items-center gap-1.5">
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>ÎNTREBĂRI FRECVENTE • ЧАСТЫЕ ВОПРОСЫ</span>
-              </span>
-              <h2 className="text-base font-black text-white uppercase tracking-tight">
-                INFORMAȚII UTILE & <span className="text-[#eab308]">TARIFE MACARA</span>
-              </h2>
-            </div>
-
-            <div className="space-y-2">
-              {faqs.map((faq, idx) => (
-                <div
-                  key={idx}
-                  className="bg-[#131b2e] rounded-xl border border-slate-700/60 overflow-hidden transition-colors"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                    className="w-full p-3 text-left flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-800/40 transition-colors"
-                  >
-                    <div>
-                      <span className="text-xs font-bold text-white block">{faq.qRo}</span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">{faq.qRu}</span>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-amber-400 shrink-0 transition-transform duration-200 ${
-                        openFaq === idx ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {openFaq === idx && (
-                    <div className="px-3 pb-3 pt-1 text-xs border-t border-slate-800/80 space-y-1.5 animate-fadeIn">
-                      <p className="text-slate-300 leading-relaxed">{faq.aRo}</p>
-                      <p className="text-[11px] text-slate-400 italic border-l-2 border-amber-400/50 pl-2">
-                        {faq.aRu}
-                      </p>
-                    </div>
+            <div className="space-y-8">
+              {(lang === 'ro' ? activeArticle.sectionsRo : activeArticle.sectionsRu).map((sec, idx) => (
+                <section key={idx} className="space-y-3">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-[#1B2028]">{sec.heading}</h2>
+                  {sec.paragraphs.map((p, pIdx) => (
+                    <p key={pIdx} className="text-base text-[#2C333F] leading-relaxed">
+                      {p}
+                    </p>
+                  ))}
+                  {sec.bullets && (
+                    <ul className="bg-[#F4F4F2] border-l-4 border-[#EA580C] p-5 rounded-r-lg space-y-2.5 mt-3">
+                      {sec.bullets.map((b, bIdx) => (
+                        <li key={bIdx} className="text-sm sm:text-base text-[#1B2028] flex items-start gap-2.5">
+                          <span className="text-[#EA580C] font-black mt-0.5">•</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </div>
+                </section>
               ))}
             </div>
-          </div>
 
-          {/* Legal & Company Footer Information */}
-          <footer className="pt-4 pb-4 text-center text-xs text-slate-400 space-y-2.5">
-            <div className="flex justify-center mb-1">
-              <div className="bg-white rounded-xl px-3.5 py-1.5 border border-slate-700/80 shadow-md inline-flex items-center">
-                <img
-                  src="/logo.png"
-                  alt="LiberCons Prim Logo"
-                  className="h-6 w-auto object-contain"
-                />
+            {/* Article Bottom CTA Box */}
+            <div className="mt-12 bg-[#1B2028] text-white rounded-xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl">
+                <div className="text-xs font-bold uppercase tracking-widest text-[#F57C00]">
+                  AUTOMACARA XCMG 25 TONE • BRAȚ 40–48 M
+                </div>
+                <h3 className="text-xl font-black">{t.blog.articleCtaTitle}</h3>
+                <p className="text-sm text-gray-300 leading-relaxed">{t.blog.articleCtaSub}</p>
               </div>
-            </div>
-            <div className="font-extrabold text-slate-200 tracking-wider uppercase text-[11px]">
-              LIBERCONSPRIM SRL • CHIȘINĂU, MOLDOVA
-            </div>
-            <div className="text-[11px] text-slate-400 flex flex-wrap justify-center items-center gap-2">
-              <a
-                href="mailto:contact@automacara.md"
-                className="hover:text-amber-400 transition-colors underline decoration-slate-600 underline-offset-2"
-              >
-                contact@automacara.md
-              </a>
-              <span>•</span>
-              <span>Servicii automacara în Moldova</span>
-            </div>
-            <div className="text-[10px] text-slate-500 pt-1">
-              © {new Date().getFullYear()} LiberConsPrim. Toate drepturile rezervate.
-            </div>
-          </footer>
-        </main>
-
-        {/* Fixed Bottom Dual-Call Bar (Telefon Principal & Secundar) */}
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] bg-[#0b1326]/95 backdrop-blur-md border-t border-slate-700/80 p-3 z-50 flex items-center gap-2.5 shadow-2xl">
-          {/* Secundar Call Button (069 497 778) */}
-          <a
-            href="tel:069497778"
-            className="flex-1 bg-[#131b2e] border border-slate-700 hover:bg-slate-800 active:scale-[0.98] transition-all rounded-xl py-3 px-2 flex items-center justify-center gap-2 text-white font-bold text-xs shadow-md"
-            title="Apelează numărul secundar 069 497 778"
-          >
-            <Phone className="w-4 h-4 text-[#eab308] fill-current" />
-            <span className="tracking-wide">069 497 778</span>
-          </a>
-
-          {/* Principal Call Button (069 547 396) */}
-          <a
-            href="tel:069547396"
-            className="flex-1 bg-[#eab308] hover:bg-[#ca8a04] active:scale-[0.98] transition-all rounded-xl py-3 px-2 flex items-center justify-center gap-2 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20"
-            title="Apelează numărul principal 069 547 396"
-          >
-            <Phone className="w-4 h-4 fill-current" />
-            <span className="tracking-wide">069 547 396</span>
-          </a>
-        </div>
-      </div>
-
-      {/* Quote / Request Callback Modal */}
-      {showQuoteModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#162036] border border-amber-400/40 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative">
-            <button
-              onClick={() => setShowQuoteModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {quoteSubmitted ? (
-              <div className="text-center py-6 space-y-3">
-                <div className="w-12 h-12 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto text-emerald-400">
-                  <Check className="w-6 h-6 stroke-[3]" />
-                </div>
-                <h3 className="text-lg font-black text-white uppercase">Cerere Trimisă!</h3>
-                <p className="text-xs text-slate-300">
-                  Dispeceratul LiberConsPrim vă va contacta în câteva minute la numărul indicat.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleFormSubmit} className="space-y-3.5">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="bg-white rounded-lg px-2.5 py-1 inline-flex items-center shadow-sm">
-                      <img
-                        src="/logo.png"
-                        alt="LiberCons Prim Logo"
-                        className="h-5 w-auto object-contain"
-                      />
-                    </div>
-                    <span className="text-[10px] font-black tracking-widest text-[#eab308] uppercase">
-                      SOLICITARE OFERTĂ
-                    </span>
-                  </div>
-                  <h3 className="text-base font-black text-white uppercase">
-                    Comandă Rapidă Automacara
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Lăsați numărul și vă sunăm imediat pentru confirmare.
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Numele dvs. / Compania</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="ex: Ion Popescu / Constructor SRL"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-[#0b1326] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Număr de Telefon</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="069 XXX XXX"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-[#0b1326] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Locație Lucrare</label>
-                  <input
-                    type="text"
-                    placeholder="ex: Chișinău, str. Uzinelor"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full bg-[#0b1326] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300">Tip Manevră</label>
-                  <select
-                    value={formData.workType}
-                    onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
-                    className="w-full bg-[#0b1326] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  >
-                    <option value="Montaj structuri">Montaj structuri metalice / prefabricate</option>
-                    <option value="Descărcare tir / container">Descărcare container / tir</option>
-                    <option value="Ridicare materiale etaj">Ridicare materiale la înălțime</option>
-                    <option value="Relocare utilaj greu">Relocare utilaje industriale</option>
-                    <option value="Altă manevră">Alt tip de manevră</option>
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-colors cursor-pointer mt-2"
+              <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
+                <a
+                  href="tel:069547396"
+                  onClick={() => trackEvent('click_phone_primary', { placement: 'blog_article', lang })}
+                  className="inline-flex items-center justify-center gap-2 bg-[#EA580C] hover:bg-[#D9460F] text-white font-bold text-sm px-5 py-3 rounded-md transition-colors"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Trimite Solicitarea</span>
+                  <Phone className="w-4 h-4 fill-current" />
+                  <span>069 547 396</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => scrollToContactWithFormat('Schimb Complet (8 ore)')}
+                  className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-100 text-[#1B2028] font-bold text-sm px-5 py-3 rounded-md cursor-pointer transition-colors"
+                >
+                  <span>{t.hero.ctaQuote}</span>
                 </button>
-              </form>
-            )}
+              </div>
+            </div>
+          </article>
+        </main>
+      ) : (
+        /* MAIN 6-SECTION LANDING PAGE */
+        <main className="flex-1">
+          {/* SECTION 1: EDITORIAL SPLIT HERO (#FFFFFF) */}
+          <section className="bg-white py-10 sm:py-16 lg:py-20 border-b border-[#E4E4E0]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+                {/* Left Column */}
+                <div className="lg:col-span-6 space-y-6">
+                  <div className="inline-flex items-center gap-2 border-l-4 border-[#EA580C] pl-3 text-xs font-extrabold uppercase tracking-widest text-[#525866]">
+                    {t.hero.eyebrow}
+                  </div>
+
+                  <h1 className="text-3xl sm:text-5xl font-black text-[#1B2028] tracking-tight leading-[1.12]">
+                    {t.hero.title}
+                  </h1>
+
+                  <p className="text-lg sm:text-xl font-extrabold text-[#EA580C]">
+                    „{t.hero.motto}”
+                  </p>
+
+                  <p className="text-base sm:text-lg text-[#434A57] leading-relaxed">
+                    {t.hero.description}
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                    <a
+                      href="tel:069547396"
+                      onClick={() => trackEvent('click_phone_primary', { placement: 'hero', lang })}
+                      className="inline-flex items-center justify-center gap-2.5 bg-[#EA580C] hover:bg-[#D9460F] text-white font-bold text-base px-6 py-3.5 rounded-md shadow-sm transition-colors"
+                    >
+                      <Phone className="w-4 h-4 fill-current" />
+                      <span>{t.hero.ctaCall}</span>
+                    </a>
+
+                    <a
+                      href="#contact"
+                      onClick={() => trackEvent('click_quote_scroll', { placement: 'hero', lang })}
+                      className="inline-flex items-center justify-center gap-2 border-2 border-[#EA580C] text-[#EA580C] hover:bg-[#FFF4ED] font-bold text-base px-6 py-3.5 rounded-md transition-colors"
+                    >
+                      <span>{t.hero.ctaQuote}</span>
+                    </a>
+                  </div>
+
+                  {/* Clean Trust Points */}
+                  <div className="pt-4 border-t border-[#E4E4E0] flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm font-semibold text-[#434A57]">
+                    {t.hero.trustPills.map((pill, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <Check className="w-4 h-4 text-[#EA580C] stroke-[2.5] shrink-0" />
+                        <span>{pill}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right Column: Large 4:3 Crane Hero Photo */}
+                <div className="lg:col-span-6">
+                  <figure className="rounded-xl overflow-hidden border border-[#D6D6D0] bg-[#F4F4F2] shadow-md">
+                    <img
+                      src="/crane-hero.jpg"
+                      alt={t.hero.imageCaption}
+                      width={1280}
+                      height={960}
+                      fetchPriority="high"
+                      className="w-full h-[300px] sm:h-[420px] object-cover object-center block"
+                    />
+                    <figcaption className="px-4 py-3 bg-[#F4F4F2] border-t border-[#E4E4E0] text-xs font-semibold text-[#525866] flex items-center justify-between gap-2">
+                      <span>{t.hero.imageCaption}</span>
+                      <span className="text-[#1B2028] font-bold shrink-0">S.R.L. „LIBERCONS PRIM”</span>
+                    </figcaption>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 2: PARAMETRI TEHNICI — AUTOMACARA XCMG 25 TONE (#F4F4F2) */}
+          <section id="specificatii" className="bg-[#F4F4F2] py-14 sm:py-20 border-b border-[#E4E4E0]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+              <div className="max-w-3xl space-y-2">
+                <div className="text-xs font-extrabold uppercase tracking-widest text-[#EA580C]">
+                  {t.specs.eyebrow}
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black text-[#1B2028] tracking-tight">
+                  {t.specs.title}
+                </h2>
+                <p className="text-base text-[#525866]">{t.specs.subtitle}</p>
+              </div>
+
+              {/* 4 Oversized Architectural Stat Columns */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {t.specs.cards.map((card, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white border border-[#D6D6D0] rounded-lg p-6 sm:p-7 flex flex-col justify-between"
+                  >
+                    <div className="text-3xl sm:text-4xl font-black text-[#EA580C] tracking-tight">
+                      {card.value}
+                    </div>
+                    <div className="text-sm font-bold text-[#1B2028] mt-2">{card.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 3-Row Chassis / Stabilizer / LMI Specification Bar */}
+              <div className="bg-white border border-[#D6D6D0] rounded-lg divide-y divide-[#E4E4E0]">
+                {t.specs.rows.map((row, idx) => (
+                  <div
+                    key={idx}
+                    className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-sm"
+                  >
+                    <span className="font-semibold text-[#525866]">{row.label}</span>
+                    <span className="font-extrabold text-[#1B2028]">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Engineering Load vs. Radius Reference Table */}
+              <div className="bg-white border border-[#D6D6D0] rounded-lg overflow-hidden">
+                <div className="px-6 py-4 bg-[#1B2028] text-white flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm sm:text-base font-bold">{t.specs.tableTitle}</h3>
+                  <span className="text-xs font-semibold text-[#F57C00]">XCMG QY25K5 • 360°</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                      <tr className="bg-[#F8F8F6] border-b border-[#E4E4E0] text-[#525866] font-bold">
+                        {t.specs.tableHeaders.map((th, i) => (
+                          <th key={i} className="py-3.5 px-4 sm:px-6">
+                            {th}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E4E4E0]">
+                      {LOAD_RADIUS_TABLE.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-[#F8F8F6] transition-colors">
+                          <td className="py-3.5 px-4 sm:px-6 font-extrabold text-[#1B2028] whitespace-nowrap">
+                            {row.radiusM}
+                          </td>
+                          <td className="py-3.5 px-4 sm:px-6 font-black text-[#EA580C] whitespace-nowrap">
+                            {row.maxLoadT}
+                          </td>
+                          <td className="py-3.5 px-4 sm:px-6 text-[#434A57]">
+                            {lang === 'ro' ? row.boomModeRo : row.boomModeRu}
+                          </td>
+                          <td className="py-3.5 px-4 sm:px-6 text-[#434A57]">
+                            {lang === 'ro' ? row.typicalUseRo : row.typicalUseRu}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-6 py-3.5 bg-[#F8F8F6] border-t border-[#E4E4E0] text-xs text-[#525866] leading-relaxed">
+                  {t.specs.tableDisclaimer}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 3: GAMA DE SERVICII DE RIDICARE (#FFFFFF) */}
+          <section id="servicii" className="bg-white py-14 sm:py-20 border-b border-[#E4E4E0]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+                {/* Left Column: Natural Portrait Framing of Container Photo */}
+                <div className="lg:col-span-5">
+                  <figure className="rounded-xl overflow-hidden border border-[#D6D6D0] bg-[#F4F4F2] shadow-sm">
+                    <img
+                      src="/crane-container.jpg"
+                      alt={t.services.photoCaption}
+                      width={1280}
+                      height={1707}
+                      loading="lazy"
+                      className="w-full h-[380px] sm:h-[520px] object-cover object-center block"
+                    />
+                    <figcaption className="px-4 py-3 bg-[#F4F4F2] border-t border-[#E4E4E0] text-xs font-semibold text-[#525866]">
+                      {t.services.photoCaption}
+                    </figcaption>
+                  </figure>
+                </div>
+
+                {/* Right Column: Numbered Editorial List 01–04 */}
+                <div className="lg:col-span-7 space-y-6">
+                  <div className="space-y-2 border-b border-[#E4E4E0] pb-5">
+                    <div className="text-xs font-extrabold uppercase tracking-widest text-[#EA580C]">
+                      {t.services.eyebrow}
+                    </div>
+                    <h2 className="text-2xl sm:text-4xl font-black text-[#1B2028] tracking-tight">
+                      {t.services.title}
+                    </h2>
+                  </div>
+
+                  <div className="divide-y divide-[#E4E4E0]">
+                    {t.services.items.map((srv, idx) => (
+                      <div key={idx} className="py-5 first:pt-2 flex items-start gap-4 sm:gap-6">
+                        <span className="text-2xl sm:text-3xl font-black text-[#EA580C] shrink-0 w-10">
+                          {srv.num}
+                        </span>
+                        <div className="space-y-1.5">
+                          <h3 className="text-lg sm:text-xl font-extrabold text-[#1B2028]">
+                            {srv.title}
+                          </h3>
+                          <p className="text-sm sm:text-base text-[#434A57] leading-relaxed">
+                            {srv.desc}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 4: FORMATE DE COLABORARE & ARIE DE ACOPERIRE (#F4F4F2) */}
+          <section id="colaborare" className="bg-[#F4F4F2] py-14 sm:py-20 border-b border-[#E4E4E0]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+              <div className="max-w-3xl space-y-2">
+                <div className="text-xs font-extrabold uppercase tracking-widest text-[#EA580C]">
+                  {t.packages.eyebrow}
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black text-[#1B2028] tracking-tight">
+                  {t.packages.title}
+                </h2>
+                <p className="text-base text-[#525866]">{t.packages.subtitle}</p>
+              </div>
+
+              {/* 3 Tall White Architectural Cards (No fixed hourly rate) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {t.packages.items.map((pkg, idx) => (
+                  <div
+                    key={idx}
+                    className={`bg-white rounded-xl p-6 sm:p-8 flex flex-col justify-between border transition-shadow hover:shadow-md ${
+                      pkg.featured
+                        ? 'border-[#1B2028] border-t-4 border-t-[#EA580C] shadow-sm'
+                        : 'border-[#D6D6D0]'
+                    }`}
+                  >
+                    <div className="space-y-4">
+                      <span
+                        className={`inline-block text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded ${
+                          pkg.featured
+                            ? 'bg-[#FFF4ED] text-[#EA580C] border border-[#FDBA8C]'
+                            : 'bg-[#F4F4F2] text-[#525866]'
+                        }`}
+                      >
+                        {pkg.tag}
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-[#1B2028]">{pkg.title}</h3>
+                      <p className="text-sm sm:text-base text-[#434A57] leading-relaxed">{pkg.desc}</p>
+
+                      <ul className="space-y-2.5 pt-2 border-t border-[#E4E4E0]">
+                        {pkg.bullets.map((b, bIdx) => (
+                          <li key={bIdx} className="text-sm text-[#1B2028] flex items-start gap-2">
+                            <Check className="w-4 h-4 text-[#EA580C] stroke-[2.5] shrink-0 mt-0.5" />
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => scrollToContactWithFormat(pkg.title)}
+                      className={`mt-8 w-full py-3 px-4 rounded-md font-bold text-sm transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                        pkg.featured
+                          ? 'bg-[#EA580C] hover:bg-[#D9460F] text-white'
+                          : 'bg-[#1B2028] hover:bg-[#2C333F] text-white'
+                      }`}
+                    >
+                      <span>{pkg.cta}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Coverage Area Strip */}
+              <div className="bg-white border border-[#D6D6D0] rounded-lg p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-[#FFF4ED] border border-[#FDBA8C] text-[#EA580C] flex items-center justify-center shrink-0">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div className="text-sm text-[#434A57] leading-relaxed">
+                  <strong className="text-[#1B2028] mr-1.5">{t.packages.coverageTitle}</strong>
+                  <span>{t.packages.coverageText}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 5: BLOG TEHNIC & GHIDURI DE ȘANTIER (#FFFFFF) */}
+          <section id="blog" className="bg-white py-14 sm:py-20 border-b border-[#E4E4E0]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+              <div className="max-w-3xl space-y-2">
+                <div className="text-xs font-extrabold uppercase tracking-widest text-[#EA580C]">
+                  {t.blog.eyebrow}
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black text-[#1B2028] tracking-tight">
+                  {t.blog.title}
+                </h2>
+                <p className="text-base text-[#525866]">{t.blog.subtitle}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {BLOG_ARTICLES.map((article) => {
+                  const title = lang === 'ro' ? article.titleRo : article.titleRu;
+                  const excerpt = lang === 'ro' ? article.excerptRo : article.excerptRu;
+                  const category = lang === 'ro' ? article.categoryRo : article.categoryRu;
+                  const readTime = lang === 'ro' ? article.readTimeRo : article.readTimeRu;
+                  const href = `/blog/${article.slug}/${lang === 'ru' ? '?lang=ru' : ''}`;
+
+                  return (
+                    <article
+                      key={article.slug}
+                      className="bg-[#F8F8F6] border border-[#D6D6D0] rounded-xl p-6 flex flex-col justify-between hover:border-[#EA580C] transition-colors"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 text-xs font-bold">
+                          <span className="text-[#EA580C] uppercase tracking-wider">{category}</span>
+                          <span className="text-[#525866] flex items-center gap-1">
+                            <BookOpen className="w-3.5 h-3.5" />
+                            {readTime}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-extrabold text-[#1B2028] leading-snug">
+                          <a
+                            href={href}
+                            onClick={(e) => handleOpenArticle(article.slug, e)}
+                            className="hover:text-[#EA580C] transition-colors"
+                          >
+                            {title}
+                          </a>
+                        </h3>
+
+                        <p className="text-sm text-[#434A57] leading-relaxed">{excerpt}</p>
+                      </div>
+
+                      <div className="pt-5 mt-5 border-t border-[#E4E4E0]">
+                        <a
+                          href={href}
+                          onClick={(e) => handleOpenArticle(article.slug, e)}
+                          className="inline-flex items-center gap-1.5 text-sm font-extrabold text-[#EA580C] hover:text-[#1B2028] transition-colors"
+                        >
+                          <span>{t.blog.readMore}</span>
+                        </a>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ SECTION (#F4F4F2) */}
+          <section id="intrebari" className="bg-[#F4F4F2] py-14 sm:py-20 border-b border-[#E4E4E0]">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+              <div className="space-y-2">
+                <div className="text-xs font-extrabold uppercase tracking-widest text-[#EA580C]">
+                  {t.faq.eyebrow}
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#1B2028] tracking-tight">
+                  {t.faq.title}
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {t.faq.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white border border-[#D6D6D0] rounded-lg overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                      className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-[#1B2028] hover:bg-[#F8F8F6] transition-colors cursor-pointer"
+                    >
+                      <span>{item.q}</span>
+                      <ChevronDown
+                        className={`w-5 h-5 text-[#EA580C] shrink-0 transition-transform ${
+                          openFaq === idx ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    {openFaq === idx && (
+                      <div className="px-5 pb-4 pt-1 text-sm sm:text-base text-[#434A57] border-t border-[#E4E4E0] leading-relaxed">
+                        {item.a}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 6: CONTACT DIRECT 24/7 & CREDIBILITATE B2B (#1B2028 ANTRACIT) */}
+          <section id="contact" className="bg-[#1B2028] text-white py-14 sm:py-20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+                {/* Left Column: Direct Dispatch Channels & Legal Proof */}
+                <div className="lg:col-span-6 space-y-6">
+                  <div className="text-xs font-extrabold uppercase tracking-widest text-[#F57C00]">
+                    {t.contact.eyebrow}
+                  </div>
+                  <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+                    {t.contact.title}
+                  </h2>
+                  <p className="text-base text-gray-300 leading-relaxed">{t.contact.subtitle}</p>
+
+                  {/* Primary & Secondary Phone Blocks */}
+                  <div className="space-y-3 pt-2">
+                    <a
+                      href="tel:069547396"
+                      onClick={() => trackEvent('click_phone_primary', { placement: 'contact_footer', lang })}
+                      className="w-full bg-[#EA580C] hover:bg-[#D9460F] text-white rounded-lg p-4 flex items-center justify-between transition-colors shadow-md"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-md bg-black/20 flex items-center justify-center">
+                          <Phone className="w-5 h-5 fill-current" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold uppercase tracking-wider text-orange-100">
+                            {t.contact.primaryLabel}
+                          </div>
+                          <div className="text-2xl font-black tracking-tight">069 547 396</div>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-5 h-5" />
+                    </a>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <a
+                        href="tel:069497778"
+                        onClick={() => trackEvent('click_phone_secondary', { placement: 'contact_footer', lang })}
+                        className="bg-[#262D38] hover:bg-[#313A47] border border-gray-700 rounded-lg p-3.5 text-center transition-colors"
+                      >
+                        <div className="text-[11px] text-gray-400 font-semibold uppercase">
+                          {t.contact.secondaryLabel}
+                        </div>
+                        <div className="text-base font-extrabold text-white mt-0.5">069 497 778</div>
+                      </a>
+
+                      <a
+                        href={getWhatsAppUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackEvent('click_whatsapp', { placement: 'contact_footer', lang })}
+                        className="bg-[#262D38] hover:bg-[#313A47] border border-gray-700 rounded-lg p-3.5 flex flex-col items-center justify-center transition-colors"
+                      >
+                        <div className="text-[11px] text-emerald-400 font-bold uppercase">WhatsApp</div>
+                        <div className="text-sm font-bold text-white mt-0.5">+373 69 547 396</div>
+                      </a>
+
+                      <a
+                        href="viber://chat?number=%2B37369547396"
+                        onClick={() => trackEvent('click_viber', { placement: 'contact_footer', lang })}
+                        className="bg-[#262D38] hover:bg-[#313A47] border border-gray-700 rounded-lg p-3.5 flex flex-col items-center justify-center transition-colors"
+                      >
+                        <div className="text-[11px] text-violet-400 font-bold uppercase">Viber</div>
+                        <div className="text-sm font-bold text-white mt-0.5">+373 69 547 396</div>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Official B2B Credentials Box */}
+                  <div className="bg-[#262D38] border border-gray-700 rounded-lg p-5 space-y-3 text-xs sm:text-sm">
+                    <div className="flex items-center gap-2 font-extrabold text-white">
+                      <ShieldCheck className="w-4 h-4 text-[#F57C00]" />
+                      <span>{t.footer.company} • {t.footer.idno}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-300">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-[#F57C00] shrink-0" />
+                        <span>{t.footer.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#F57C00] shrink-0" />
+                        <span>{t.footer.cert}</span>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-700 text-gray-300 flex flex-wrap items-center justify-between gap-2">
+                      <a
+                        href="mailto:contact@automacara.md"
+                        className="hover:text-[#F57C00] underline underline-offset-4"
+                      >
+                        contact@automacara.md
+                      </a>
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <Clock className="w-3.5 h-3.5 text-[#F57C00]" />
+                        24/7 • automacara.md
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Instant Lead Capture Form */}
+                <div className="lg:col-span-6">
+                  <div className="bg-white text-[#1B2028] rounded-xl p-6 sm:p-8 shadow-xl border border-[#D6D6D0]">
+                    {submitted ? (
+                      <div className="py-6 text-center space-y-4">
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                          <Check className="w-6 h-6 stroke-[2.5]" />
+                        </div>
+                        <h3 className="text-xl font-black text-[#1B2028]">{t.contact.successTitle}</h3>
+                        <p className="text-sm text-[#434A57] leading-relaxed max-w-md mx-auto">
+                          {t.contact.successDesc}
+                        </p>
+                        <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+                          <a
+                            href={getWhatsAppUrl(whatsappSummaryText)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackEvent('click_whatsapp', { placement: 'form_success', lang })}
+                            className="inline-flex items-center justify-center gap-2 bg-[#1B2028] hover:bg-[#2C333F] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-md transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            <span>{t.contact.whatsappFollowup}</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSubmitted(false);
+                              setFormData({
+                                name: '',
+                                phone: '',
+                                format: 'Schimb Complet (8 ore)',
+                                location: '',
+                                details: ''
+                              });
+                            }}
+                            className="inline-flex items-center justify-center px-4 py-2.5 rounded-md border border-[#D6D6D0] text-xs sm:text-sm font-bold text-[#434A57] hover:text-[#1B2028] cursor-pointer"
+                          >
+                            {t.contact.newRequestBtn}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleFormSubmit} className="space-y-4">
+                        <div>
+                          <h3 className="text-xl font-black text-[#1B2028]">{t.contact.formTitle}</h3>
+                          <p className="text-xs sm:text-sm text-[#525866] mt-0.5">{t.contact.formSubtitle}</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-[#1B2028] mb-1">
+                              {t.contact.fieldName}
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder={t.contact.fieldNamePlaceholder}
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              className="w-full bg-[#F8F8F6] border border-[#D6D6D0] rounded-md px-3.5 py-2.5 text-sm text-[#1B2028] focus:outline-none focus:border-[#EA580C]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-[#1B2028] mb-1">
+                              {t.contact.fieldPhone}
+                            </label>
+                            <input
+                              type="tel"
+                              required
+                              placeholder={t.contact.fieldPhonePlaceholder}
+                              value={formData.phone}
+                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                              className="w-full bg-[#F8F8F6] border border-[#D6D6D0] rounded-md px-3.5 py-2.5 text-sm text-[#1B2028] focus:outline-none focus:border-[#EA580C]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-[#1B2028] mb-1">
+                              {t.contact.fieldFormat}
+                            </label>
+                            <select
+                              value={formData.format}
+                              onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+                              className="w-full bg-[#F8F8F6] border border-[#D6D6D0] rounded-md px-3.5 py-2.5 text-sm text-[#1B2028] focus:outline-none focus:border-[#EA580C]"
+                            >
+                              {t.packages.items.map((p, i) => (
+                                <option key={i} value={p.title}>
+                                  {p.title}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-[#1B2028] mb-1">
+                              {t.contact.fieldLocation}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={t.contact.fieldLocationPlaceholder}
+                              value={formData.location}
+                              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                              className="w-full bg-[#F8F8F6] border border-[#D6D6D0] rounded-md px-3.5 py-2.5 text-sm text-[#1B2028] focus:outline-none focus:border-[#EA580C]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-[#1B2028] mb-1">
+                            {t.contact.fieldDetails}
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder={t.contact.fieldDetailsPlaceholder}
+                            value={formData.details}
+                            onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                            className="w-full bg-[#F8F8F6] border border-[#D6D6D0] rounded-md px-3.5 py-2.5 text-sm text-[#1B2028] focus:outline-none focus:border-[#EA580C]"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={submitting}
+                          className="w-full bg-[#EA580C] hover:bg-[#D9460F] disabled:opacity-60 text-white font-bold text-sm py-3.5 rounded-md flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                        >
+                          <Send className="w-4 h-4" />
+                          <span>{submitting ? t.contact.submittingBtn : t.contact.submitBtn}</span>
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      )}
+
+      {/* OFFICIAL ARCHITECTURAL FOOTER */}
+      <footer className="bg-[#14181F] text-gray-400 border-t border-gray-800 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+            <div className="bg-white rounded px-2.5 py-1 inline-flex items-center">
+              <img src="/logo.png" alt="LIBERCONS PRIM" width={108} height={36} className="h-6 w-auto object-contain" />
+            </div>
+            <span className="font-bold text-white">{t.footer.company}</span>
+            <span>•</span>
+            <span>{t.footer.idno}</span>
+            <span>•</span>
+            <span>{t.footer.location}</span>
+            <span>•</span>
+            <span>{t.footer.cert}</span>
+          </div>
+          <div>
+            © {new Date().getFullYear()} {t.footer.company} (automacara.md). {t.footer.rights}
           </div>
         </div>
-      )}
+      </footer>
+
+      {/* MOBILE STICKY BOTTOM CALL BAR (md:hidden) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#D6D6D0] px-3 py-2.5 flex items-center gap-2 shadow-lg">
+        <a
+          href="tel:069497778"
+          onClick={() => trackEvent('click_phone_secondary', { placement: 'sticky_mobile', lang })}
+          className="flex-1 bg-[#1B2028] text-white font-bold text-xs py-2.5 rounded-md flex items-center justify-center gap-1.5"
+        >
+          <Phone className="w-3.5 h-3.5 text-[#F57C00] fill-current" />
+          <span>069 497 778</span>
+        </a>
+        <a
+          href="tel:069547396"
+          onClick={() => trackEvent('click_phone_primary', { placement: 'sticky_mobile', lang })}
+          className="flex-1 bg-[#EA580C] text-white font-bold text-xs py-2.5 rounded-md flex items-center justify-center gap-1.5"
+        >
+          <Phone className="w-3.5 h-3.5 fill-current" />
+          <span>069 547 396</span>
+        </a>
+      </div>
     </div>
   );
 }

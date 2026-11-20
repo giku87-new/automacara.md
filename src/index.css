@@ -2,41 +2,37 @@
 
 @layer base {
   :root {
-    --font-sans: 'Chivo', sans-serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Chivo', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
-  
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    background-color: #060e20;
-    color: #f1f5f9;
-    font-family: 'Chivo', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #ffffff;
+    color: #1B2028;
+    font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
   }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
 }
 
-.industrial-border {
-  border: 1px solid rgba(234, 179, 8, 0.25);
-}
-
-.glow-gold {
-  box-shadow: 0 0 25px rgba(234, 179, 8, 0.18);
-}
-
-.glow-gold-lg {
-  box-shadow: 0 0 35px rgba(234, 179, 8, 0.3);
-}
-
-/* Custom scrollbar for sleeker industrial feel */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #060e20;
+  background: #F4F4F2;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: #C4C4BC;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #eab308;
+  background: #EA580C;
 }

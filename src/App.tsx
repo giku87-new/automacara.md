@@ -176,8 +176,13 @@ export default function App(props: AppProps) {
       submittedAt: new Date().toISOString()
     };
 
+    const leadEndpoint =
+      typeof window !== 'undefined' && window.location.hostname.endsWith('.workers.dev')
+        ? '/api/lead'
+        : 'https://automacara-md.clubturistic.workers.dev/api/lead';
+
     try {
-      const response = await fetch('/api/lead', {
+      const response = await fetch(leadEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

@@ -24,10 +24,18 @@ interface LeadPayload {
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url);
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    };
 
     if (url.pathname === '/api/lead') {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: corsHeaders });
+      }
       if (request.method !== 'POST') {
-        return Response.json({ ok: false, error: 'Method Not Allowed' }, { status: 405 });
+        return Response.json({ ok: false, error: 'Method Not Allowed' }, { status: 405, headers: corsHeaders });
       }
 
       try {
@@ -40,7 +48,7 @@ export default {
         const lang = (body.lang || 'ro').trim().slice(0, 5);
 
         if (!name || !phone) {
-          return Response.json({ ok: false, error: 'Missing required fields' }, { status: 400 });
+          return Response.json({ ok: false, error: 'Missing required fields' }, { status: 400, headers: corsHeaders });
         }
 
         // Structured JSON log for Cloudflare Workers Logs & Traces
@@ -116,7 +124,7 @@ export default {
           }
         }
 
-        return Response.json({ ok: true, deliveredVia }, { status: 200 });
+        return Response.json({ ok: true, deliveredVia }, { status: 200, headers: corsHeaders });
       } catch (err) {
         console.error(
           JSON.stringify({
@@ -124,7 +132,7 @@ export default {
             error: err instanceof Error ? err.message : String(err)
           })
         );
-        return Response.json({ ok: false, error: 'Invalid request payload' }, { status: 400 });
+        return Response.json({ ok: false, error: 'Invalid request payload' }, { status: 400, headers: corsHeaders });
       }
     }
 

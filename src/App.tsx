@@ -202,7 +202,7 @@ export default function App(props: AppProps) {
     <div className="min-h-screen bg-white text-[#1B2028] antialiased flex flex-col pb-16 md:pb-0">
       {/* 1. MINIMAL ARCHITECTURAL HEADER (#FFFFFF) */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E4E4E0]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Official Brand Logo */}
           <a
             href={lang === 'ru' ? '/ru/' : '/'}
@@ -398,75 +398,87 @@ export default function App(props: AppProps) {
       ) : (
         /* MAIN 6-SECTION LANDING PAGE */
         <main className="flex-1">
-          {/* SECTION 1: EDITORIAL SPLIT HERO (#FFFFFF) */}
-          <section className="bg-white py-10 sm:py-16 lg:py-20 border-b border-[#E4E4E0]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-                {/* Left Column */}
-                <div className="lg:col-span-6 space-y-6">
-                  <div className="inline-flex items-center gap-2 border-l-4 border-[#EA580C] pl-3 text-xs font-extrabold uppercase tracking-widest text-[#525866]">
-                    {t.hero.eyebrow}
+          {/* SECTION 1: CRANE-FIRST HERO SHOWCASE (IMAGE FIRST ON BOTH MOBILE & WEB) */}
+          <section className="bg-white pt-3 pb-10 sm:pt-5 sm:pb-14 border-b border-[#E4E4E0]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+              {/* 1A. TOP CRANE VISUAL SHOWCASE — FIRST ELEMENT UNDER HEADER */}
+              <figure className="relative rounded-xl overflow-hidden border border-[#D6D6D0] bg-[#1B2028] shadow-md">
+                <div className="relative w-full h-[240px] sm:h-[360px] lg:h-[440px] overflow-hidden bg-[#1B2028]">
+                  <img
+                    src="/crane-hero.jpg"
+                    alt={t.hero.imageCaption}
+                    width={1280}
+                    height={960}
+                    fetchPriority="high"
+                    className="w-full h-full object-cover object-center block"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1B2028]/85 via-[#1B2028]/15 to-transparent" />
+
+                  {/* Top Badges on Crane Image */}
+                  <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 flex flex-wrap items-center justify-between gap-2">
+                    <span className="bg-[#1B2028]/90 backdrop-blur-sm text-white border border-white/15 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-md shadow">
+                      {t.hero.eyebrow}
+                    </span>
+                    <span className="bg-[#EA580C] text-white text-[11px] sm:text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-md shadow">
+                      XCMG 25 TONE • 40–48 M
+                    </span>
                   </div>
 
-                  <h1 className="text-3xl sm:text-5xl font-black text-[#1B2028] tracking-tight leading-[1.12]">
-                    {t.hero.title}
-                  </h1>
+                  {/* Bottom Spec Bar Inside Crane Visual */}
+                  <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-5 sm:right-5 flex flex-wrap items-end justify-between gap-3 text-white">
+                    <div>
+                      <p className="text-xs sm:text-sm font-extrabold text-[#FDBA8C] uppercase tracking-wider">
+                        „{t.hero.motto}”
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-200 font-medium mt-0.5">
+                        {t.hero.imageCaption}
+                      </p>
+                    </div>
+                    <span className="hidden sm:inline-block bg-white/95 text-[#1B2028] text-xs font-extrabold px-3 py-1 rounded">
+                      S.R.L. „LIBERCONS PRIM” • 24/7
+                    </span>
+                  </div>
+                </div>
+              </figure>
 
-                  <p className="text-lg sm:text-xl font-extrabold text-[#EA580C]">
-                    „{t.hero.motto}”
-                  </p>
+              {/* 1B. DIRECTLY ATTACHED TITLE & ACTION BAR (ABOVE THE FOLD) */}
+              <div className="bg-[#F8F8F6] border border-[#D6D6D0] rounded-xl p-5 sm:p-7 lg:p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                  <div className="lg:col-span-7 space-y-2.5">
+                    <h1 className="text-2xl sm:text-4xl font-black text-[#1B2028] tracking-tight leading-tight">
+                      {t.hero.title}
+                    </h1>
+                    <p className="text-sm sm:text-base text-[#434A57] leading-relaxed">
+                      {t.hero.description}
+                    </p>
+                    <div className="pt-1 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs sm:text-sm font-semibold text-[#1B2028]">
+                      {t.hero.trustPills.map((pill, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5">
+                          <Check className="w-4 h-4 text-[#EA580C] stroke-[2.5] shrink-0" />
+                          <span>{pill}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                  <p className="text-base sm:text-lg text-[#434A57] leading-relaxed">
-                    {t.hero.description}
-                  </p>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                  <div className="lg:col-span-5 flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch sm:items-center justify-end gap-3">
                     <a
                       href="tel:069547396"
                       onClick={() => trackEvent('click_phone_primary', { placement: 'hero', lang })}
-                      className="inline-flex items-center justify-center gap-2.5 bg-[#EA580C] hover:bg-[#D9460F] text-white font-bold text-base px-6 py-3.5 rounded-md shadow-sm transition-colors"
+                      className="inline-flex items-center justify-center gap-2.5 bg-[#EA580C] hover:bg-[#D9460F] text-white font-black text-base px-6 py-4 rounded-lg shadow-sm transition-colors"
                     >
-                      <Phone className="w-4 h-4 fill-current" />
+                      <Phone className="w-5 h-5 fill-current shrink-0" />
                       <span>{t.hero.ctaCall}</span>
                     </a>
 
                     <a
                       href="#contact"
                       onClick={() => trackEvent('click_quote_scroll', { placement: 'hero', lang })}
-                      className="inline-flex items-center justify-center gap-2 border-2 border-[#EA580C] text-[#EA580C] hover:bg-[#FFF4ED] font-bold text-base px-6 py-3.5 rounded-md transition-colors"
+                      className="inline-flex items-center justify-center gap-2 bg-white hover:bg-[#FFF4ED] border-2 border-[#1B2028] text-[#1B2028] font-bold text-base px-5 py-3.5 rounded-lg transition-colors"
                     >
                       <span>{t.hero.ctaQuote}</span>
                     </a>
                   </div>
-
-                  {/* Clean Trust Points */}
-                  <div className="pt-4 border-t border-[#E4E4E0] flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm font-semibold text-[#434A57]">
-                    {t.hero.trustPills.map((pill, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5">
-                        <Check className="w-4 h-4 text-[#EA580C] stroke-[2.5] shrink-0" />
-                        <span>{pill}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Right Column: Large 4:3 Crane Hero Photo */}
-                <div className="lg:col-span-6">
-                  <figure className="rounded-xl overflow-hidden border border-[#D6D6D0] bg-[#F4F4F2] shadow-md">
-                    <img
-                      src="/crane-hero.jpg"
-                      alt={t.hero.imageCaption}
-                      width={1280}
-                      height={960}
-                      fetchPriority="high"
-                      className="w-full h-[300px] sm:h-[420px] object-cover object-center block"
-                    />
-                    <figcaption className="px-4 py-3 bg-[#F4F4F2] border-t border-[#E4E4E0] text-xs font-semibold text-[#525866] flex items-center justify-between gap-2">
-                      <span>{t.hero.imageCaption}</span>
-                      <span className="text-[#1B2028] font-bold shrink-0">S.R.L. „LIBERCONS PRIM”</span>
-                    </figcaption>
-                  </figure>
                 </div>
               </div>
             </div>

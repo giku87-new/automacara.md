@@ -24,5 +24,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["dist"]
+  "include": ["src", "scripts", "vite.config.ts"],
+  "exclude": ["dist", "node_modules", "social-mcp-server", "github-mcp-server"]
 }
